@@ -1,1 +1,2 @@
-.tiff - EPSG: 3857, 3 lag (NIR/B08, R/B04, G/B03), WGS 84
+32VNH_0_B08,B04,B03.tiff - EPSG: 3857, 3 lag (NIR/B08, R/B04, G/B03), WGS 84
+osm-roads - EPSG: 4326, WGS 84 you need all 5 files because they depend on eachother, however, you only need to load in the .shp-file.

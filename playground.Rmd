@@ -26,9 +26,9 @@ plotRGB(aarhus)
 
 #From https://mapcruzin.com/free-denmark-arcgis-maps-shapefiles.htm
 # TODO: Look for a better map - some roads are missing
-roads_4326 <- st_read('data/denmark-roads-shape/roads.shp')
+roads_4326 <- st_read('data/osm-roads/gis_osm_roads_free_1.shp')
 
-roads_3857 <- st_transform(roads, crs = crs(aarhus)) # transform roads crs to match raster
+roads_3857 <- st_transform(roads_4326 , crs = crs(aarhus)) # transform roads crs to match raster
 
 #compareCRS(roads_crs, crs(aarhus))
 
@@ -39,10 +39,10 @@ aarhus_box <- st_make_grid(aarhus, n = 1) # Create a polygon
 #plot(aarhus_box)
 #plot(st_geometry(roads_crs), add = TRUE)
 
-cropped <- st_intersection(aarhus_box, roads_3857)
+roads_cropped <- st_intersection(aarhus_box, roads_3857)
 plot(st_geometry(roads_3857))
-plot(st_geometry(cropped))
-plot(cropped)
+plot(st_geometry(roads_cropped))
+plot(roads_cropped)
 #View(st_geometry(roads))
 #plotRGB(aarhus)
 #plot(cropped, add = TRUE)
@@ -50,7 +50,7 @@ plot(cropped)
 leaflet() %>%
   addProviderTiles("OpenStreetMap") %>%
   #addRasterImage(aarhus) %>% # Does not work with a brick, but should work with the raster heatmap
-  addPolylines(data = st_transform(cropped, crs = 4326)) %>%
+  addPolylines(data = st_transform(roads_cropped, crs = 4326)) %>%
   setView(lng = 10.2, lat = 56.15, zoom = 11) # Aarhus
   
 
