@@ -1,0 +1,1 @@
+.tiff - EPSG: 3857, 3 lag (NIR/B08, R/B04, G/B03), WGS 84

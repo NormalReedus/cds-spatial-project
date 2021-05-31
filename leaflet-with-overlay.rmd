@@ -1,0 +1,36 @@
+---
+title: "map"
+author: "Magnus Bendix Borregaard"
+date: "4/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+library(raster)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+
+# Remember to show the matching CRS (hence why we don't need to transform them)
+# All provider tiles for leaflet are EPSG:3857 (Spherical Mercator / Web Mercator)
+# Talk about how leaflet uses EPSG:4326 (3D model w. longlat / Spherical Mercator) for coords, but projects into EPSG:3857
+
+crs(aarhus) # EPSG:3857 (Web Mercator)
+
+#aarhus <- brick('data/32VNH_0_B08,B04,B03.tiff')
+aarhus <- raster('data/32VNH_0_B08,B04,B03.tiff') # Heatmap is gonna be a raster, so this is just to test the overlay
+
+leaflet() %>%
+  addProviderTiles("OpenStreetMap") %>%
+  addRasterImage(aarhus) %>% # Does not work with a brick, but should work with the raster heatmap
+  setView(lng = 10.2, lat = 56.15, zoom = 11) # Aarhus
+
+
+#bbox(aarhus)
+#crs(aarhus)
+#plotRGB(aarhus)
+```
