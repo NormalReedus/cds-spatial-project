@@ -82,3 +82,9 @@ leaflet() %>%
   
 
 ```
+
+```{r}
+boundaries <- boundaries(aarhus_veg_2class, type='outer', directions=8)
+plot(aarhus_veg_2class)
+plot(boundaries)
+```
