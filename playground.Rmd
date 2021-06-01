@@ -9,33 +9,71 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Packages
 ```{r}
 library(raster)
 library(sf)
 library(leaflet)
-
-aarhus <- brick('data/32VNH_0_B08,B04,B03.tiff')
-# aarhus_raster_test <- raster('data/32VNH_0_B08,B04,B03.tiff')
-
-bbox(aarhus)
-crs(aarhus)
-plotRGB(aarhus)
 ```
 
-## Loading Roads
+## Loading satellite image & generating NDVI
+```{r}
+aarhus_NIR <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 1)
+aarhus_red <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 2)
+aarhus_NDVI <- (aarhus_NIR - aarhus_red) / (aarhus_NIR + aarhus_red)
+plot(aarhus_NDVI)
+```
+
+## NDVI threshold for 'green areas'
+```{r}
+# hist(aarhus_NDVI)
+
+# reclassify to 'no vegetation', 'low vegetation', and 'high vegetation'
+# from, to, new class
+m_3_class <- matrix(c(-1.1, 0.2, NA, # no veg
+              0.2, 0.5, 1, # low veg
+              0.5, 1, 2), # high veg
+            ncol=3, byrow=TRUE)
+
+aarhus_veg_3class <- reclassify(aarhus_NDVI, m_3_class)
+
+# reclassify to 'no vegetation' and 'vegetation'
+m_2_class <- matrix(c(-1.1, 0.5, NA, # no veg
+              0.5, 1, 2), # veg
+            ncol=3, byrow=TRUE)
+
+aarhus_veg_2class <- reclassify(aarhus_NDVI, m_2_class)
+
+#plot(aarhus_veg_2class)
+
+# Show on map so we can determine a good threshold
+leaflet() %>%
+  addProviderTiles("Esri.WorldImagery") %>%
+  addRasterImage(aarhus_veg_2class, group = 'No & high veg') %>% 
+  addRasterImage(aarhus_veg_3class, group = 'No, low, & high veg') %>% 
+  setView(lng = 10.2, lat = 56.15, zoom = 11) %>% # Aarhus
+  addLayersControl(
+    overlayGroups = c("No & high veg", "No, low, & high veg"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>% hideGroup("No, low, & high veg")
+
+```
+
+## Loading & cropping roads
 ```{r}
 
 roads_4326 <- st_read('data/osm-roads/gis_osm_roads_free_1.shp')
 
-roads_3857 <- st_transform(roads_4326 , crs = crs(aarhus)) # transform roads crs to match raster
+# transform roads crs to match raster, any version of Aarhus will do
+roads_3857 <- st_transform(roads_4326 , crs = crs(aarhus_NDVI)) 
 
-compareCRS(roads_3857, crs(aarhus)) # keep this as a sanity check
+compareCRS(roads_3857, crs(aarhus_NDVI)) # ready to crop
 
-aarhus_box <- st_make_grid(aarhus, n = 1) # bounding box of satellite image
+aarhus_box <- st_make_grid(aarhus_NDVI, n = 1) # bounding box of satellite image
 
 roads_cropped <- st_intersection(aarhus_box, roads_3857)
 
-
+# Check that roads are cropped and line up
 leaflet() %>%
   addProviderTiles("OpenStreetMap") %>%
   #addRasterImage(aarhus_raster_test) %>% # does not work with a brick, but should work with the raster heatmap
