@@ -15,7 +15,7 @@ library(sf)
 library(leaflet)
 
 aarhus <- brick('data/32VNH_0_B08,B04,B03.tiff')
-aarhus_raster_test <- raster('data/32VNH_0_B08,B04,B03.tiff')
+# aarhus_raster_test <- raster('data/32VNH_0_B08,B04,B03.tiff')
 
 bbox(aarhus)
 crs(aarhus)
@@ -38,7 +38,7 @@ roads_cropped <- st_intersection(aarhus_box, roads_3857)
 
 leaflet() %>%
   addProviderTiles("OpenStreetMap") %>%
-  addRasterImage(aarhus_raster_test) %>% # does not work with a brick, but should work with the raster heatmap
+  #addRasterImage(aarhus_raster_test) %>% # does not work with a brick, but should work with the raster heatmap
   addPolylines(data = st_transform(roads_cropped, crs = 4326)) %>%
   setView(lng = 10.2, lat = 56.15, zoom = 11) # Aarhus
   
