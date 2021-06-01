@@ -58,6 +58,7 @@ leaflet() %>%
   ) %>% hideGroup("No, low, & high veg")
 
 ```
+High vegetation (> 0.5 NDVI) seems to match pretty well with our definition of a green area
 
 ## Loading & cropping roads
 ```{r}
