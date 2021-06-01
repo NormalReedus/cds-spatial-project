@@ -19,6 +19,15 @@
   - Afstande = fugleflugt hen til nærmeste path og så alm pathfinding
 - Lav en leaflet med et alm. kort og heatmappet, så man kan skifte lag nemt []
 
+# Raster vs shapes
+- (konvertér reclassed NDVI til shapes)
+- (Find contours) + udregn arealer af områder
+- Filtrer små områder fra
+- Udregne afstand mellem statisk punkt og nærmeste del af grønt område
+  - I rasters kan dette være brute force afstanden mellem det statiske punkt og ALLE punkter i et område og så tage den korteste afstand
+  - I shapes kan det være der er noget smart matematik??
+- Skriv afstandsværdien til en ny raster i det statiske punkts koordinat
+
 # HUSK
 - Plot NDVI med grøn
 - Sikr os at vi plotter / tegner bands korrekt
