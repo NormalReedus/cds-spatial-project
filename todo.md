@@ -24,7 +24,7 @@
 - (Find contours) + udregn arealer af områder
 - Filtrer små områder fra
 - Udregne afstand mellem statisk punkt og nærmeste del af grønt område
-  - I rasters kan dette være brute force afstanden mellem det statiske punkt og ALLE punkter i et område og så tage den korteste afstand
+  - I rasters kan dette bare være afstand til nærmeste grønne pixel (KNN, n=1)
   - I shapes kan det være der er noget smart matematik??
 - Skriv afstandsværdien til en ny raster i det statiske punkts koordinat
 
