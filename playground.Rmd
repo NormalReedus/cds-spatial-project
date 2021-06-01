@@ -85,7 +85,13 @@ leaflet() %>%
 ```
 
 ```{r}
-boundaries <- boundaries(aarhus_veg_2class, type='outer', directions=8)
+boundaries <- boundaries(aarhus_veg_2class, type='outer', directions=4)
 plot(aarhus_veg_2class)
 plot(boundaries)
+
+clumps <- clump(aarhus_veg_2class, direction = 4)
+plot(clumps)
+tail(clumps)
+
+clumps[1128, 2]
 ```
