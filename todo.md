@@ -15,7 +15,7 @@
   - lav kolonne med areal, som er antal pixels i pixels-listen * pixelstørrelse
   - filtrere dataframe for at fjerne store områder
     - loop alle pixels i små imråder ogennem og sæt til NA i den originale raster
-- Lav en ny raster (et heatmap), hvor alle pixelværdier korresponderer med hvor langt der er til nærmeste grønne område []
+- Lav en ny raster (et heatmap), hvor alle pixelværdier korresponderer med hvor langt der er til nærmeste grønne område [X]
   - Bare afstand til nærmeste grønne pixel (KNN, n=1)
   - Research question: Gode områder at købe bolig hvis man kan lide grønne områder
   - Én version med afstande i fugleflugt []
@@ -23,6 +23,8 @@
   - Én version med pathfinding-afstande []
 - Find vector-data over stier/veje etc i Aarhus [X]
   - Afstande = fugleflugt hen til nærmeste path og så alm pathfinding
+- Redigér pixelstørrelse / resolution, da den ikke lader til at stemme overens med virkeligheden
+  - Også opdatér area_min_size
 - Lav en leaflet med et alm. kort og heatmappet, så man kan skifte lag nemt []
 
 # HUSK

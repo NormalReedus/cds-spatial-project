@@ -32,7 +32,7 @@ plot(aarhus_NDVI)
 # Resolution of satellite image is 35.991m^2, so we can just use the first index
 pixel_size <- res(aarhus_NDVI)[1]
 
-# reclassify to 'no vegetation', 'low vegetation', and 'high vegetation'
+# Reclassify to 'no vegetation', 'low vegetation', and 'high vegetation'
 # from, to, new class
 m_3_class <- matrix(c(-1.1, 0.2, NA, # no veg
               0.2, 0.5, 1, # low veg
@@ -41,7 +41,7 @@ m_3_class <- matrix(c(-1.1, 0.2, NA, # no veg
 
 aarhus_veg_3class <- reclassify(aarhus_NDVI, m_3_class)
 
-# reclassify to 'no vegetation' and 'vegetation'
+# Reclassify to 'no vegetation' and 'vegetation'
 m_2_class <- matrix(c(-1.1, 0.6, NA, # no veg
               0.6, 1, 1), # veg
             ncol=3, byrow=TRUE)
@@ -66,7 +66,7 @@ High vegetation (> 0.6 NDVI) seems to match pretty well with our definition of a
 ## Filter off small areas
 ```{r}
 # m^2 for minimum allowed size to be called a 'green area'
-area_min_size <- 360
+area_min_size <- 360 # EDIT THIS TO SOMETHING ELSE, THE RESOLUTION IS INCORRECT
 
 # Rename the best raster for ease of use
 aarhus_veg <- aarhus_veg_2class
@@ -125,6 +125,25 @@ leaflet() %>%
   setView(lng = 10.2, lat = 56.15, zoom = 11) # Aarhus
 
 
+```
+## Generating distance heatmap
+```{r}
+# copy the green area raster
+# reclass every 1 to a 0 in the copy (every 1 symbolizes a green area, but we now need it to symbolize the distance to the nearest green area)
+# use 'distance' from 'raster' package to fill every NA with the distance to the nearest 0-pixel
+
+# Copy the green areas raster so we don't mutate the original
+aarhus_crow_heatmap <- aarhus_veg
+
+# Reclassify ones to zeroes
+# every 1 symbolizes a green area, but we now need it to symbolize the distance to the nearest green area (which is 0)
+m <- matrix(c(1, 0),
+            ncol=2, byrow=TRUE)
+
+aarhus_crow_heatmap <- reclassify(aarhus_crow_heatmap, m)
+aarhus_crow_heatmap <- distance(aarhus_crow_heatmap)
+tail(aarhus_crow_heatmap)
+crs(aarhus_NDVI)
 ```
 
 ## Loading & cropping roads
