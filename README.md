@@ -7,3 +7,6 @@
 - Find referencer på, hvorfor havnen kan være så grøn (alger, tang etc?)
 - Skriv om processen, hvori vi valgte et threshold til grønne områder
   - Vi brugte den her: https://www.int-arch-photogramm-remote-sens-spatial-inf-sci.net/XLII-4-W16/237/2019/isprs-archives-XLII-4-W16-237-2019.pdf
+  
+## Dependencies
+- igraph (bruges af `clump`)

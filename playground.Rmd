@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(raster)
 library(sf)
 library(leaflet)
+library(hash)
 ```
 
 ## Loading satellite image & generating NDVI
@@ -21,12 +22,15 @@ library(leaflet)
 aarhus_NIR <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 1)
 aarhus_red <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 2)
 aarhus_NDVI <- (aarhus_NIR - aarhus_red) / (aarhus_NIR + aarhus_red)
+
+# Unfortunately there were a lot of algae (or something like it) in the harbor when the image was taken
 plot(aarhus_NDVI)
 ```
 
 ## NDVI threshold for 'green areas'
 ```{r}
-# hist(aarhus_NDVI)
+# Resolution of satellite image is 35.991m^2, so we can just use the first index
+pixel_size <- res(aarhus_NDVI)[1]
 
 # reclassify to 'no vegetation', 'low vegetation', and 'high vegetation'
 # from, to, new class
@@ -38,15 +42,15 @@ m_3_class <- matrix(c(-1.1, 0.2, NA, # no veg
 aarhus_veg_3class <- reclassify(aarhus_NDVI, m_3_class)
 
 # reclassify to 'no vegetation' and 'vegetation'
-m_2_class <- matrix(c(-1.1, 0.5, NA, # no veg
-              0.5, 1, 2), # veg
+m_2_class <- matrix(c(-1.1, 0.6, NA, # no veg
+              0.6, 1, 1), # veg
             ncol=3, byrow=TRUE)
 
 aarhus_veg_2class <- reclassify(aarhus_NDVI, m_2_class)
 
 #plot(aarhus_veg_2class)
 
-# Show on map so we can determine a good threshold
+# Show on map so we can validate a good NDVI threshold and minimum area for green areas
 leaflet() %>%
   addProviderTiles("Esri.WorldImagery") %>%
   addRasterImage(aarhus_veg_2class, group = 'No & high veg') %>% 
@@ -56,9 +60,72 @@ leaflet() %>%
     overlayGroups = c("No & high veg", "No, low, & high veg"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>% hideGroup("No, low, & high veg")
+```
+High vegetation (> 0.6 NDVI) seems to match pretty well with our definition of a green area, and about 10 pixels (~360m^2) looks to be a good minimum size for a green area.
+
+## Filter off small areas
+```{r}
+# m^2 for minimum allowed size to be called a 'green area'
+area_min_size <- 360
+
+# Rename the best raster for ease of use
+aarhus_veg <- aarhus_veg_2class
+
+# Create a dictionary that allows us to filter off areas that are small
+# since the number of pixels with a given ID directly corresponds
+# to the area of that green area
+id_counts <- hash()
+
+# Give every pixel an ID corresponding to which green area it is a part of
+area_map <- clump(aarhus_veg, direction = 4)
+# Select only the values we need
+area_ids <- area_map@data@values
+
+# Count how many there are of every ID
+for (id in area_ids) {
+  id <- toString(id)
+  
+  if (is.null(id_counts[[id]])) {
+    id_counts[[id]] <- 1
+  } else {
+    id_counts[[id]] <- id_counts[[id]] + 1
+  }
+}
+del("NA", id_counts)
+
+# Convert from pixel count to m^2 for every green area and remove big areas
+# (we just need at list of the areas to REMOVE from the original raster)
+for (key in keys(id_counts)) {
+  # Calculate the m^2 area
+  area_size <- id_counts[[key]] * pixel_size
+  
+  # Remove big areas from this dictionary
+  if (area_size > area_min_size) {
+    del(key, id_counts)
+  }
+}
+
+for (i in 1:length(area_ids)) {
+  # Select the green area ID of the pixel
+  val <- toString(area_ids[[i]])
+  
+  # Whether to remove this pixel
+  remove_pixel <- has.key(val, id_counts)
+  
+  # Set the corresponding pixel in the original raster to NA
+  # since it is part of small area
+  if (remove_pixel) {
+    aarhus_veg@data@values[[i]] <- NA
+  }
+}
+
+leaflet() %>%
+  addProviderTiles("Esri.WorldImagery") %>%
+  addRasterImage(aarhus_veg) %>% 
+  setView(lng = 10.2, lat = 56.15, zoom = 11) # Aarhus
+
 
 ```
-High vegetation (> 0.5 NDVI) seems to match pretty well with our definition of a green area
 
 ## Loading & cropping roads
 ```{r}
@@ -77,21 +144,19 @@ roads_cropped <- st_intersection(aarhus_box, roads_3857)
 # Check that roads are cropped and line up
 leaflet() %>%
   addProviderTiles("OpenStreetMap") %>%
-  #addRasterImage(aarhus_raster_test) %>% # does not work with a brick, but should work with the raster heatmap
   addPolylines(data = st_transform(roads_cropped, crs = 4326)) %>%
   setView(lng = 10.2, lat = 56.15, zoom = 11) # Aarhus
   
-
 ```
 
-```{r}
-boundaries <- boundaries(aarhus_veg_2class, type='outer', directions=4)
-plot(aarhus_veg_2class)
-plot(boundaries)
 
-clumps <- clump(aarhus_veg_2class, direction = 4)
-plot(clumps)
-tail(clumps)
 
-clumps[1128, 2]
-```
+
+
+
+
+
+
+
+
+

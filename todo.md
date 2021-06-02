@@ -6,7 +6,7 @@
   - Week 4: raster manipulation har om reclassification - der er også om cropping, hvis vi skal bruge det
   - Find en skilleværdi for grøn/ikke grøn (måske lidt over 0.5, for ikke at få alt for mange sammenhængende områder)
 
-- Fjern områder med et areal der er for småt []
+- Fjern områder med et areal der er for småt [X]
   - Find en skilleværdi 
   - raster::clump til at cluster grønne områder
   - kollapse dataframe på id'er
