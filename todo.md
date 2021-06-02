@@ -1,13 +1,13 @@
 # TODO
 - Test: lav en form for plot, hvor det liner op med Aarhus [X]
-- Lav en NDVI raster (NIR - R) / (NIR + R) []
+- Lav en NDVI raster (NIR - R) / (NIR + R) [X]
   - Week 5: remote sensing har et eksempel på NDVI, vi skal bare selv lige isolere båndene
-- Reclassify områder til grønne & ikke grønne områder []
+- Reclassify områder til grønne & ikke grønne områder [X]
   - Week 4: raster manipulation har om reclassification - der er også om cropping, hvis vi skal bruge det
-  - Find en skilleværdi for grøn/ikke grøn
+  - Find en skilleværdi for grøn/ikke grøn (måske lidt over 0.5, for ikke at få alt for mange sammenhængende områder)
 
 - Fjern områder med et areal der er for småt []
-  - Find en skilleværdi (måske lidt over 0.5)
+  - Find en skilleværdi 
   - raster::clump til at cluster grønne områder
   - kollapse dataframe på id'er
   - lav dataframe med id og liste af koordinater for pixels
