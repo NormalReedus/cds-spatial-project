@@ -30,6 +30,7 @@ plot(aarhus_NDVI)
 ## NDVI threshold for 'green areas'
 ```{r}
 # Resolution of satellite image is 35.991m^2, so we can just use the first index
+# ÆNDR TIL BARE AT VÆRE EN HARDCODET VÆRDI FRA VORES MÅLING, OG SÅ SÆT res(aarhus_NDVI) TIL AT VÆRE VÆRDIEN
 pixel_size <- res(aarhus_NDVI)[1]
 
 # Reclassify to 'no vegetation', 'low vegetation', and 'high vegetation'
@@ -48,8 +49,6 @@ m_2_class <- matrix(c(-1.1, 0.6, NA, # no veg
 
 aarhus_veg_2class <- reclassify(aarhus_NDVI, m_2_class)
 
-#plot(aarhus_veg_2class)
-
 # Show on map so we can validate a good NDVI threshold and minimum area for green areas
 leaflet() %>%
   addProviderTiles("Esri.WorldImagery") %>%
@@ -61,12 +60,13 @@ leaflet() %>%
     options = layersControlOptions(collapsed = FALSE)
   ) %>% hideGroup("No, low, & high veg")
 ```
+ÆNDR (~360) TIL DEN NYE STØRRELSE AF LIGE OVER 10 PIX
 High vegetation (> 0.6 NDVI) seems to match pretty well with our definition of a green area, and about 10 pixels (~360m^2) looks to be a good minimum size for a green area.
 
 ## Filter off small areas
 ```{r}
 # m^2 for minimum allowed size to be called a 'green area'
-area_min_size <- 360 # EDIT THIS TO SOMETHING ELSE, THE RESOLUTION IS INCORRECT
+area_min_size <- 360 # EDIT THIS TO THE NEW RES OF JUST ABOVE 10 PIX
 
 # Rename the best raster for ease of use
 aarhus_veg <- aarhus_veg_2class
@@ -77,7 +77,7 @@ aarhus_veg <- aarhus_veg_2class
 id_counts <- hash()
 
 # Give every pixel an ID corresponding to which green area it is a part of
-area_map <- clump(aarhus_veg, direction = 4)
+area_map <- clump(aarhus_veg, direction = 4) # only use rook's case, since areas are often separated diagonally
 # Select only the values we need
 area_ids <- area_map@data@values
 
@@ -128,10 +128,6 @@ leaflet() %>%
 ```
 ## Generating distance heatmap
 ```{r}
-# copy the green area raster
-# reclass every 1 to a 0 in the copy (every 1 symbolizes a green area, but we now need it to symbolize the distance to the nearest green area)
-# use 'distance' from 'raster' package to fill every NA with the distance to the nearest 0-pixel
-
 # Copy the green areas raster so we don't mutate the original
 aarhus_crow_heatmap <- aarhus_veg
 
@@ -139,11 +135,21 @@ aarhus_crow_heatmap <- aarhus_veg
 # every 1 symbolizes a green area, but we now need it to symbolize the distance to the nearest green area (which is 0)
 m <- matrix(c(1, 0),
             ncol=2, byrow=TRUE)
-
 aarhus_crow_heatmap <- reclassify(aarhus_crow_heatmap, m)
+
+# Fill in every transparent pixel (NA) with the value of the distance to nearest green pixel
 aarhus_crow_heatmap <- distance(aarhus_crow_heatmap)
-tail(aarhus_crow_heatmap)
-crs(aarhus_NDVI)
+
+# See the heatmap
+leaflet() %>%
+  addProviderTiles("Esri.WorldImagery") %>%
+  addRasterImage(aarhus_crow_heatmap, group = "As the crow flies") %>% 
+  setView(lng = 10.2, lat = 56.15, zoom = 11) %>% # Aarhus
+  addLayersControl(
+    overlayGroups = c("As the crow flies"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
 ```
 
 ## Loading & cropping roads
