@@ -140,10 +140,17 @@ aarhus_crow_heatmap <- reclassify(aarhus_crow_heatmap, m)
 # Fill in every transparent pixel (NA) with the value of the distance to nearest green pixel
 aarhus_crow_heatmap <- distance(aarhus_crow_heatmap)
 
+veg_colors <- colorRampPalette(c("darkgreen", "lightblue"))(100)
+plot(aarhus_crow_heatmap, col = veg_colors)
+
 # See the heatmap
 leaflet() %>%
   addProviderTiles("Esri.WorldImagery") %>%
-  addRasterImage(aarhus_crow_heatmap, group = "As the crow flies") %>% 
+  addRasterImage(
+    aarhus_crow_heatmap,
+    group = "As the crow flies",
+    colors = veg_colors
+  ) %>% 
   setView(lng = 10.2, lat = 56.15, zoom = 11) %>% # Aarhus
   addLayersControl(
     overlayGroups = c("As the crow flies"),
