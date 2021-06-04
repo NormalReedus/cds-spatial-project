@@ -1,0 +1,48 @@
+---
+title: "analytics"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+hist(aarhus_crow_heatmap, breaks = 1200 / 20)
+```
+```{r}
+increment <- function(num){
+  eval.parent(substitute(num <- num + 1))
+}
+
+green_area <- 0
+total_area <- 0
+for(pixel in aarhus_crow_heatmap@data@values){
+  if(pixel == 0 && !is.na(pixel)){
+    increment(green_area)
+  }
+  
+  if(!is.na(pixel)){
+    increment(total_area)
+  }
+}
+
+print(green_area)
+print(total_area)
+print((green_area / total_area) * 100)
+
+aarhus_veg_poly <- rasterToPolygons(aarhus_veg)
+
+aarhus_veg_poly <- st_as_sf(aarhus_veg_poly)
+
+centroids <- st_centroid(aarhus_veg_poly)
+
+plot(centroids)
+
+
+leaflet() %>%
+  addProviderTiles("Esri.WorldImagery") %>%
+  addRasterImage(aarhus_veg) %>%
+  addCircleMarkers(data = centroids) %>%
+  setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom)
+```

@@ -219,12 +219,13 @@ leaflet() %>%
   addRasterImage(
     aarhus_veg,
     group = "Heatmap",
-    colors = "green"
+    colors = "#36453B"
   ) %>% 
   # Roads make it easier to understand locations when in heatmap mode
   addPolylines(
     data = st_transform(roads_cropped, crs = 4326),
     weight = 3,
+    opacity = 0.3,
     color = "#fff",
     group = "Heatmap") %>%
   # Look at Aarhus
@@ -243,9 +244,12 @@ leaflet() %>%
     overlayGroups = c("Heatmap"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>% hideGroup("Heatmap")
-  
 ```
 
+## Some stats
+```{r}
+
+```
 
 
 
