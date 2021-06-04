@@ -62,6 +62,7 @@ leaflet() %>%
     options = layersControlOptions(collapsed = FALSE)
   ) %>% hideGroup("No, low, & high veg")
 ```
+
 ## Filter off small areas
 High vegetation (> 0.6 NDVI) seems to match pretty well with our definition of a green area, and about 10 pixels (~200^2) looks to be a good cutoff size for a green area.
 ```{r}
@@ -130,58 +131,65 @@ leaflet() %>%
 ## Generating distance heatmap
 ```{r}
 # Copy the green areas raster so we don't mutate the original
-aarhus_crow_heatmap <- aarhus_veg
+aarhus_dist_heatmap <- aarhus_veg
 
 # Reclassify ones to zeroes
 # every 1 symbolizes a green area, but we now need it to symbolize the distance to the nearest green area (which is 0)
 m <- matrix(c(1, 0),
             ncol=2, byrow=TRUE)
-aarhus_crow_heatmap <- reclassify(aarhus_crow_heatmap, m)
+aarhus_dist_heatmap <- reclassify(aarhus_dist_heatmap, m)
 
 # Fill in every transparent pixel (NA) with the value of the distance to nearest green pixel
-aarhus_crow_heatmap <- distance(aarhus_crow_heatmap)
+aarhus_dist_heatmap <- distance(aarhus_dist_heatmap)
 
-# Define a color gradient that allows us to identify ~all distances, that are only found at sea
+# Define a color gradient for drawing distances
 veg_colors <- colorRampPalette(c("darkgreen", "lightblue"))
-# Check plot for the highest distance found only on land
-plot(aarhus_crow_heatmap, col = veg_colors(20)) # color picker says ~1km to green area is max on land
+
+# Check plot for the highest distance found only on land (so we can remove very high values only found at sea)
+plot(aarhus_dist_heatmap, col = veg_colors(20))
+
+# Color picker says ~1km to green area is max on land, so we set it to 1.2km to be safe
+max_dist <- 1200 # meters
+
+# Verify that 1200 meters is a good cutoff point
+hist(aarhus_dist_heatmap, breaks = 1200/20)
 
 # Reclassify longer distances to not stretch the color gradient as much
-max_dist <- 1200 # meters
 m <- matrix(c(max_dist, Inf, NA),
             ncol=3, byrow=TRUE)
-aarhus_crow_heatmap <- reclassify(aarhus_crow_heatmap, m)
+aarhus_dist_heatmap <- reclassify(aarhus_dist_heatmap, m)
 
 palette <- colorNumeric(
     veg_colors(100),
-    raster::values(aarhus_crow_heatmap),
+    raster::values(aarhus_dist_heatmap),
     na.color = "transparent"
   )
 
-# See the final heatmap
+# See that the heatmap lines up with green areas
 leaflet() %>%
   addProviderTiles("Esri.WorldImagery") %>%
   addRasterImage(
-    aarhus_crow_heatmap,
-    group = "As the crow flies",
+    aarhus_dist_heatmap,
+    group = "Heatmap",
     colors = veg_colors(100)
   ) %>% 
   setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom) %>%
-  addLayersControl(
-    overlayGroups = c("As the crow flies"),
-    options = layersControlOptions(collapsed = FALSE)
-  ) %>%
   addLegend(
     "bottomright",
     pal = palette,
-    values = raster::values(aarhus_crow_heatmap),
+    values = raster::values(aarhus_dist_heatmap),
     title = "Dist. (m.)",
+    group = "Heatmap",
     opacity = 1
-  )
+  ) %>%
+  addLayersControl(
+    overlayGroups = c("Heatmap"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) 
 
 ```
 
-## Loading & cropping roads
+## Load & crop roads
 ```{r}
 
 roads_4326 <- st_read('data/osm-roads/gis_osm_roads_free_1.shp')
@@ -194,20 +202,49 @@ compareCRS(roads_3857, crs(aarhus_NDVI)) # ready to crop
 aarhus_box <- st_make_grid(aarhus_NDVI, n = 1) # bounding box of satellite image
 
 roads_cropped <- st_intersection(aarhus_box, roads_3857)
-
-# Check that roads are cropped and line up
-leaflet() %>%
-  addProviderTiles("OpenStreetMap") %>%
-  addPolylines(data = st_transform(roads_cropped, crs = 4326)) %>%
-  setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom)
-  
 ```
 
-
-
-
-
-
+## Display the final app
+```{r}
+leaflet() %>%
+  # For finding a specific location
+  addProviderTiles("OpenStreetMap") %>%
+  # The heatmap
+  addRasterImage(
+    aarhus_dist_heatmap,
+    group = "Heatmap",
+    colors = veg_colors(100)
+  ) %>% 
+  # The actual green areas
+  addRasterImage(
+    aarhus_veg,
+    group = "Heatmap",
+    colors = "green"
+  ) %>% 
+  # Roads make it easier to understand locations when in heatmap mode
+  addPolylines(
+    data = st_transform(roads_cropped, crs = 4326),
+    weight = 3,
+    color = "#fff",
+    group = "Heatmap") %>%
+  # Look at Aarhus
+  setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom) %>%
+  # Shows colors of the distances
+  addLegend(
+    "bottomright",
+    pal = palette,
+    values = raster::values(aarhus_dist_heatmap),
+    title = "Dist. (m.)",
+    group = "Heatmap",
+    opacity = 1
+  ) %>%
+  # Toggle heatmap mode
+  addLayersControl(
+    overlayGroups = c("Heatmap"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>% hideGroup("Heatmap")
+  
+```
 
 
 
