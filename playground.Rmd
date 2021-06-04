@@ -11,10 +11,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Packages
 ```{r}
+library(tidyverse)
 library(raster)
 library(sf)
 library(leaflet)
 library(hash)
+library(rgeos)
+library(spatstat)
 ```
 
 ## Loading satellite image & generating NDVI
@@ -195,13 +198,13 @@ leaflet() %>%
 roads_4326 <- st_read('data/osm-roads/gis_osm_roads_free_1.shp')
 
 # transform roads crs to match raster, any version of Aarhus will do
-roads_3857 <- st_transform(roads_4326 , crs = crs(aarhus_NDVI)) 
+roads_25832 <- st_transform(roads_4326 , crs = crs(aarhus_NDVI)) 
 
-compareCRS(roads_3857, crs(aarhus_NDVI)) # ready to crop
+compareCRS(roads_25832, crs(aarhus_NDVI)) # ready to crop
 
 aarhus_box <- st_make_grid(aarhus_NDVI, n = 1) # bounding box of satellite image
 
-roads_cropped <- st_intersection(aarhus_box, roads_3857)
+roads_cropped <- st_intersection(aarhus_box, roads_25832)
 ```
 
 ## Display the final app
@@ -246,9 +249,35 @@ leaflet() %>%
   ) %>% hideGroup("Heatmap")
 ```
 
-## Some stats
+## Are green areas clustered?
 ```{r}
+# Clump together pixels to make a polygon for every area
+aarhus_veg_clump <- clump(aarhus_veg, direction = 4)
+aarhus_veg_poly <- rasterToPolygons(aarhus_veg_clump, dissolve = TRUE)
 
+# Convert to sf to use sf methods
+aarhus_veg_poly <- st_as_sf(aarhus_veg_poly)
+
+# Calulate centroids to get points to analyse
+aarhus_veg_centroids <- st_centroid(aarhus_veg_poly)
+
+# Generate window necessary for ppp conversion
+win_xrange <- extent(aarhus_veg_centroids)[1:2]
+win_yrange <- extent(aarhus_veg_centroids)[3:4]
+centroid_owin <- owin(xrange = win_xrange, yrange = win_yrange)
+
+# Separate coordinates into separate columns, which is necessary for ppp conversion
+aarhus_veg_centroids <- aarhus_veg_centroids %>%
+  mutate(x = unlist(map(aarhus_veg_centroids$geometry, 1)),
+         y = unlist(map(aarhus_veg_centroids$geometry, 2)))
+
+# Convert centroids to ppp
+aarhus_veg_centroids <- ppp(x = aarhus_veg_centroids$x, y = aarhus_veg_centroids$y, centroid_owin)
+
+# Perform quadrat test to see if green areas are clustered
+quad_test <- quadrat.test(aarhus_veg_centroids, nx = 10, ny = 10)
+quad_test
+plot(quad_test)
 ```
 
 
