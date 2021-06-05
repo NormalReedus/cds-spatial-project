@@ -307,10 +307,14 @@ quad_test <- quadrat.test(aarhus_veg_centroids, nx = 10, ny = 10)
 quad_test
 plot(quad_test) # easier to read in fullscreen
 ```
+
 ## How much of Aarhus (our crop) is covered by 'green areas'
 ```{r}
+# Init counters for total area that is not NA and areas of 'green' pixels
 green_area <- 0
 total_area <- 0
+
+# Counts total pixels and 'green' pixels
 for (pix_val in aarhus_dist_heatmap@data@values) {
   if (!is.na(pix_val)) {
     total_area <- total_area + 1
@@ -321,11 +325,19 @@ for (pix_val in aarhus_dist_heatmap@data@values) {
   }
 }
 
-print(green_area)
-print(total_area)
-print(green_area / total_area)
-```
+# Output the fraction of total area that is 'green'
+green_area / total_area
 
+# Output areas in hectares
+pixel_size <- res(aarhus_veg)
+green_area_hectares <- green_area * pixel_size[1] * pixel_size[2] / 10^4
+total_area_hectares <- total_area * pixel_size[1] * pixel_size[2] / 10^4
+green_area_hectares
+total_area_hectares
+```
+About 16% of the total area of our (imprecisely) defined Aarhus area is covered in what we have chosen to define as 'green areas'.
+
+That is ~8,100 hectares out of a total ~51,150 hectares!
 
 
 
