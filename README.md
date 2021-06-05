@@ -1,5 +1,8 @@
 # cds-spatial-project
 
+## Guide
+SKRIV OM HVORDAN MAN KØRER SCRIPTS OG INSTALLERER DEPS
+
 ## Noter til det skriftlige
 - Forklar om EPSG'er
   - EPSG 3857 havde dårlige afstande i DK, så vi blev nødt til at projektere til 25832, som passer meget godt med DK
