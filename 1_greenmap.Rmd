@@ -1,5 +1,5 @@
 ---
-title: "load_map.rmd"
+title: "Greenmap"
 author: "Mikkel Plesner Ottosen & Magnus Bendix Borregaard"
 date: "4/20/2021"
 output: html_document
@@ -22,70 +22,85 @@ library(spatstat)
 
 ## Loading satellite image & generating NDVI
 ```{r}
+# Define location for Aarhus for repeated leaflet drawing
 aarhus_lng <- 10.2
 aarhus_lat <- 56.15
 aarhus_zoom <- 11
+
 # EPSG 3857
 aarhus_NIR <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 1)
 aarhus_red <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 2)
 aarhus_NDVI <- (aarhus_NIR - aarhus_red) / (aarhus_NIR + aarhus_red)
 
-# Project image, since EPSG 3857 is bad with distances in Denmark
-aarhus_NDVI <- projectRaster(aarhus_NDVI, crs = 25832)
-# Unfortunately there were a lot of algae (or something like it) in the harbor when the image was taken
+# Reproject raster since EPSG 3857 distances are very warped this far north
+aarhus_NDVI <- projectRaster(aarhus_NDVI, crs = 25832) # 25832 has very accurate distances in Denmark, we measured
+
+# Let's check it out
 plot(aarhus_NDVI)
 ```
+Unfortunately there were a lot of algae (or something like it) in the harbor when the image was taken but otherwise it looks right!
 
 ## NDVI threshold for 'green areas'
 ```{r}
-# Reclassify to 'no vegetation', 'low vegetation', and 'high vegetation'
-# from, to, new class
-m_3_class <- matrix(c(-1.1, 0.2, NA, # no veg
-              0.2, 0.5, 1, # low veg
-              0.5, 1, 2), # high veg
-            ncol=3, byrow=TRUE)
+# Reclassify to 'no vegetation' and 'low vegetation' (threshold at NDVI == 0.2)
+m_low <- matrix(c(-Inf, 0.2, NA, # no veg
+                  0.2, Inf, 1), # low veg
+                ncol=3, byrow=TRUE)
 
-aarhus_veg_3class <- reclassify(aarhus_NDVI, m_3_class)
+# Reclassify to 'no vegetation' and 'high vegetation' (threshold at NDVI == 0.5)
+m_high <- matrix(c(-Inf, 0.5, NA, # no veg
+                   0.5, Inf, 1), # high veg
+                ncol=3, byrow=TRUE)
 
-# Reclassify to 'no vegetation' and 'vegetation'
-m_2_class <- matrix(c(-1.1, 0.6, NA, # no veg
-              0.6, 1, 1), # veg
-            ncol=3, byrow=TRUE)
+# Reclassify to 'no vegetation' and 'x-high vegetation' (threshold at NDVI == 0.6)
+m_xhigh <- matrix(c(-Inf, 0.6, NA, # no veg
+                    0.6, Inf, 1), # x-high veg
+                  ncol=3, byrow=TRUE)
 
-aarhus_veg_2class <- reclassify(aarhus_NDVI, m_2_class)
+aarhus_veg_low <- reclassify(aarhus_NDVI, m_low)
+aarhus_veg_high <- reclassify(aarhus_NDVI, m_high)
+aarhus_veg_xhigh <- reclassify(aarhus_NDVI, m_xhigh)
 
 # Show on map so we can validate a good NDVI threshold and minimum area for green areas
 leaflet() %>%
   addProviderTiles("Esri.WorldImagery") %>%
-  addRasterImage(aarhus_veg_2class, group = 'No & high veg') %>% 
-  addRasterImage(aarhus_veg_3class, group = 'No, low, & high veg') %>% 
+  addRasterImage(aarhus_veg_low, group = 'Low threshold') %>% 
+  addRasterImage(aarhus_veg_high, group = 'High threshold') %>% 
+  addRasterImage(aarhus_veg_xhigh, group = 'Extra high threshold') %>% 
   setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom) %>%
   addLayersControl(
-    overlayGroups = c("No & high veg", "No, low, & high veg"),
+    overlayGroups = c("Low threshold", "High threshold", "Extra high threshold"),
     options = layersControlOptions(collapsed = FALSE)
-  ) %>% hideGroup("No, low, & high veg")
+  ) %>% hideGroup(c("Low threshold", "High threshold"))
 ```
+### Determining a threshold
+An NDVI threshold of 0.2 is clearly too low - most areas bleed together and we get a lot of fields, that are not really what we would characterize as a 'green area' in the sense that you would want to go for a walk in a field.
+
+An NDVI threshold of 0.5 catches most of the parks and forests, which is pretty ideal, but we still get a lot of areas that are just grassy or fields.
+
+An NDVI threshold of 0.6 seems to match pretty well with our definition of a 'green area' - we lose a bit of our wanted areas, but we also eliminate most of the gap-jumping (areas that span across roads) and areas that do not have at least some taller vegetation than grass - a fair trade off.
 
 ## Filter off small areas
-High vegetation (> 0.6 NDVI) seems to match pretty well with our definition of a green area, and about 10 pixels (~200^2) looks to be a good cutoff size for a green area.
+From the above maps we can determine that more than about 10 square pixels (~200^2) looks to be a good cutoff size for a green area that one would visit on a stroll - it is right about the size when a small patch of trees become a (in our opinion) 'green area'.
+
+
 ```{r}
 # Rename the best raster for ease of use
-aarhus_veg <- aarhus_veg_2class
+aarhus_veg <- aarhus_veg_xhigh
 
-# Number of pixels^2 for minimum allowed size to be called a 'green area'
-area_min_pix <- 10 # 10 pixels (~200m^2) seems to be just too small
+# Number of pixels^2 above which we allow an area to be kept in our map
+area_min_pix <- 10 # (~200m^2)
 
-# Create a dictionary that allows us to filter off areas that are small
-# since the number of pixels with a given ID directly corresponds
-# to the area of that green area
+# Dictionary to keep track of how many pixels belong to every continuous clump of pixels (distinct areas)
 id_counts <- hash()
 
 # Give every pixel an ID corresponding to which green area it is a part of
-area_map <- clump(aarhus_veg, direction = 4) # only use rook's case, since areas are often separated diagonally
+area_map <- clump(aarhus_veg, direction = 4) # only use rook's case, since areas are not often connected diagonally
+
 # Select only the values we need
 area_ids <- area_map@data@values
 
-# Count how many there are of every ID
+# Count how many pixels there are of every ID
 for (id in area_ids) {
   id <- toString(id)
   
@@ -95,12 +110,16 @@ for (id in area_ids) {
     id_counts[[id]] <- id_counts[[id]] + 1
   }
 }
+
+# Remove NA from the dictionary, we will only keep the keys of the IDs to remove from the raster
 del("NA", id_counts)
 
-# Remove big areas from list of areas
-# (we just need at list of the areas to REMOVE from the original raster)
+# Since the number of pixels with a given ID directly corresponds
+# to the area of that clump, we can use the pixel count to filter by size
+
+# Remove the IDs of big areas from dictionary of area IDs
 for (key in keys(id_counts)) {
-  # Calculate the m^2 area
+  # Area size corresponds to pixel counts of clump with the given ID
   area_size <- id_counts[[key]]
   
   # Remove big areas from this dictionary
@@ -109,12 +128,12 @@ for (key in keys(id_counts)) {
   }
 }
 
-# Remove pixels that belong to small areas
+# Remove pixels belonging to small clumps from original raster
 for (i in 1:length(area_ids)) {
   # Select the green area ID of the pixel
   val <- toString(area_ids[[i]])
   
-  # Whether to remove this pixel
+  # Whether to remove this pixel (i.e. is this ID in the dict of pixel IDs to remove)
   remove_pixel <- has.key(val, id_counts)
   
   # Set the corresponding pixel in the original raster to NA
@@ -124,11 +143,16 @@ for (i in 1:length(area_ids)) {
   }
 }
 
-# See if the areas line up as expected
+# See if the pixel clumps at and below 10 pixels are gone
 leaflet() %>%
   addProviderTiles("Esri.WorldImagery") %>%
-  addRasterImage(aarhus_veg) %>% 
-  setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom)
+  addRasterImage(aarhus_veg_xhigh, group = 'Before') %>% 
+  addRasterImage(aarhus_veg, group = 'After') %>% 
+  setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom) %>%
+  addLayersControl(
+    overlayGroups = c("Before", "After"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>% hideGroup("Before")
 ```
 
 ## Generating distance heatmap
@@ -145,30 +169,32 @@ aarhus_dist_heatmap <- reclassify(aarhus_dist_heatmap, m)
 # Fill in every transparent pixel (NA) with the value of the distance to nearest green pixel
 aarhus_dist_heatmap <- distance(aarhus_dist_heatmap)
 
-# Define a color gradient for drawing distances
+# Define a fitting color gradient for drawing distances
 veg_colors <- colorRampPalette(c("darkgreen", "lightblue"))
 
-# Check plot for the highest distance found only on land (so we can remove very high values only found at sea)
+# Check plot for the highest distance found only on land
+# so we can remove very high values only found at sea, since these stretch the legend significantly
 plot(aarhus_dist_heatmap, col = veg_colors(20))
 
 # Color picker says ~1km to green area is max on land, so we set it to 1.2km to be safe
 max_dist <- 1200 # meters
 
 # Verify that 1200 meters is a good cutoff point
-hist(aarhus_dist_heatmap, breaks = 1200/20)
+hist(aarhus_dist_heatmap, breaks = 60, main = "Distance to nearest green area", ylab = "Number of pixels", xlab = "Meters")
 
 # Reclassify longer distances to not stretch the color gradient as much
-m <- matrix(c(max_dist, Inf, NA),
+m <- matrix(c(max_dist, Inf, NA), # everything above max_dist is set to NA
             ncol=3, byrow=TRUE)
 aarhus_dist_heatmap <- reclassify(aarhus_dist_heatmap, m)
 
+# Defining a color palette with more steps to work on leaflet legend
 palette <- colorNumeric(
     veg_colors(100),
     raster::values(aarhus_dist_heatmap),
     na.color = "transparent"
   )
 
-# See that the heatmap lines up with green areas
+# See that the heatmap works and lines up with green areas
 leaflet() %>%
   addProviderTiles("Esri.WorldImagery") %>%
   addRasterImage(
@@ -194,23 +220,25 @@ leaflet() %>%
 
 ## Load & crop roads
 ```{r}
-
 roads_4326 <- st_read('data/osm-roads/gis_osm_roads_free_1.shp')
 
-# transform roads crs to match raster, any version of Aarhus will do
+# Transform roads crs to match raster
 roads_25832 <- st_transform(roads_4326 , crs = crs(aarhus_NDVI)) 
 
-compareCRS(roads_25832, crs(aarhus_NDVI)) # ready to crop
+# Verify that roads can be cropped to the raster's bounds correctly
+compareCRS(roads_25832, crs(aarhus_NDVI))
 
-aarhus_box <- st_make_grid(aarhus_NDVI, n = 1) # bounding box of satellite image
+# Bounding box of satellite image
+aarhus_box <- st_make_grid(aarhus_NDVI, n = 1)
 
+# Cropping the roads, so we don't have superfluous data to load and display
 roads_cropped <- st_intersection(aarhus_box, roads_25832)
 ```
 
 ## Display the final app
 ```{r}
 leaflet() %>%
-  # For finding a specific location
+  # For finding a specific location easier
   addProviderTiles("OpenStreetMap") %>%
   # The heatmap
   addRasterImage(
@@ -218,7 +246,7 @@ leaflet() %>%
     group = "Heatmap",
     colors = veg_colors(100)
   ) %>% 
-  # The actual green areas
+  # The green areas highlighted
   addRasterImage(
     aarhus_veg,
     group = "Heatmap",
@@ -231,9 +259,7 @@ leaflet() %>%
     opacity = 0.3,
     color = "#fff",
     group = "Heatmap") %>%
-  # Look at Aarhus
-  setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom) %>%
-  # Shows colors of the distances
+  # Shows colors for the distances
   addLegend(
     "bottomright",
     pal = palette,
@@ -242,6 +268,8 @@ leaflet() %>%
     group = "Heatmap",
     opacity = 1
   ) %>%
+  # Look at Aarhus
+  setView(lng = aarhus_lng, lat = aarhus_lat, zoom = aarhus_zoom) %>%
   # Toggle heatmap mode
   addLayersControl(
     overlayGroups = c("Heatmap"),
@@ -277,9 +305,26 @@ aarhus_veg_centroids <- ppp(x = aarhus_veg_centroids$x, y = aarhus_veg_centroids
 # Perform quadrat test to see if green areas are clustered
 quad_test <- quadrat.test(aarhus_veg_centroids, nx = 10, ny = 10)
 quad_test
-plot(quad_test)
+plot(quad_test) # easier to read in fullscreen
 ```
+## How much of Aarhus (our crop) is covered by 'green areas'
+```{r}
+green_area <- 0
+total_area <- 0
+for (pix_val in aarhus_dist_heatmap@data@values) {
+  if (!is.na(pix_val)) {
+    total_area <- total_area + 1
+    
+    if (pix_val == 0) {
+      green_area <- green_area + 1
+    }
+  }
+}
 
+print(green_area)
+print(total_area)
+print(green_area / total_area)
+```
 
 
 
