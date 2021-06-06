@@ -12,6 +12,8 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
 ```
 ## Project description
 
@@ -58,7 +60,7 @@ Unfortunately there were a lot of algae (or something like it) in the harbor whe
 
 ## NDVI threshold for 'green areas'
 
-We will need to define a fitting NDVI threshold for our definition of a 'green area' so not every field and bush is displayed alongside parks and forests. To do this, we found inspiration [here](linktoarticle.com)
+We will need to define a fitting NDVI threshold for our definition of a 'green area' so not every field and bush is displayed alongside parks and forests. To do this, we found inspiration [here](https://www.int-arch-photogramm-remote-sens-spatial-inf-sci.net/XLII-4-W16/237/2019/isprs-archives-XLII-4-W16-237-2019.pdf).
 
 ```{r, warning=FALSE}
 # Reclassify to 'no vegetation' and 'low vegetation' (threshold at NDVI == 0.2)
@@ -254,7 +256,7 @@ Looking at the heatmap overlaid on a satellite image of Aarhus, we can verify th
 
 To make it a bit easier to see where you are when in heatmap mode, let's load in some roads.
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, results='hide'}
 roads_4326 <- st_read('data/osm-roads/gis_osm_roads_free_1.shp')
 
 # Transform roads crs to match raster
@@ -330,7 +332,7 @@ You can now find the best place to buy a house if you want to live close to a pa
 
 Knowing how plants and trees repoduce and the effects of urbanisation on vegetation, we would expect to see 'green areas' being more closely located some places than other. Is this the case for our defined Aarhus area?
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, fig.width=12, fig.asp=1}
 # Clump together pixels to make a polygon for every area
 aarhus_veg_clump <- clump(aarhus_veg, direction = 4)
 aarhus_veg_poly <- rasterToPolygons(aarhus_veg_clump, dissolve = TRUE)
@@ -388,7 +390,7 @@ for (pix_val in aarhus_dist_heatmap@data@values) {
 green_area / total_area
 ```
 
-About 16% of the total area of our (imprecisely) defined Aarhus area is covered in what we have chosen to define as 'green areas'.
+About 19% of the total area of our (imprecisely) defined Aarhus area is covered in what we have chosen to define as 'green areas'.
 
 To find out what these areas are in non-pixel units, we simply multiply the pixel count by our pixel size (in meters) to get the m² area, and for easier readability, we can convert m² to hectares by multiplying again with 10⁴.
 
