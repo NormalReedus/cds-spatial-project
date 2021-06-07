@@ -52,14 +52,13 @@ NDVI_denominator <- aarhus_NIR + aarhus_red
 aarhus_NDVI <- NDVI_numerator / NDVI_denominator
 
 # Reproject raster since EPSG 3857 distances are very warped this far north
-aarhus_NDVI <- projectRaster(aarhus_NDVI, crs = 25832) # 25832 has very accurate distances in Denmark - we measured
+#aarhus_NDVI <- projectRaster(aarhus_NDVI, crs = 25832) # 25832 has very accurate distances in Denmark - we measured
 
 # Let's check it out
-res(aarhus_NDVI)
 plot(aarhus_NDVI)
 ```
 
-Unfortunately there were a lot of algae (or something like it) in the harbor when the image was taken but otherwise it looks great! NDVI is not a perfect indicator for what we define as a 'green area', but it is close enough for this proof-of-concept. The resolution of the original satellite image is not amazing, but we are going to filter off smaller 'green areas', so ~20x20 meters is too small in that regard anyway.
+Unfortunately there were a lot of algae (or something like it) in the harbor when the image was taken but otherwise it looks great! NDVI is not a perfect indicator for what we define as a 'green area', but it is close enough for this proof-of-concept.
 
 ## NDVI threshold for 'green areas'
 
@@ -104,15 +103,29 @@ An NDVI threshold of 0.5 catches most of the parks and forests, which is pretty 
 
 An **NDVI threshold of 0.6** seems to match pretty well with our definition of a 'green area' - we lose a bit of our wanted areas, but we also eliminate most of the gap-jumping (areas that span across roads etc.) and areas that do not have at least some taller vegetation than grass - a fair trade off.
 
-## Size threshold for 'green areas'
+## Reproject raster image
 
-From the leaflet above, we can also determine that more than about 10 square pixels (~200^2) looks to be a good cutoff size for a green area that one would visit on a stroll - it is right about the size when a small patch of trees become a (in our opinion) 'green area'. Let's remove the smaller areas.
-
+It's important to notice, that we are still working with an inaccurate CRS (EPSG 3857) for measuring areas and distances in Denmark, since reprojecting the raster earlier would have warped the pixel values, mutating our NDVI-raster to include impossible values. Since we no longer need the pixel values, but rather the distances and areas, we can now reproject the raster into EPSG 25832.
 
 ```{r, warning=FALSE}
 # Rename the best raster for ease of use
 aarhus_veg <- aarhus_veg_xhigh
 
+# Reproject raster since EPSG 3857 distances are very warped this far north
+aarhus_veg <- projectRaster(aarhus_veg, crs = 25832) # 25832 has very accurate distances in Denmark - we measured
+
+# Let's verify that the pixels are now correct
+res(aarhus_veg)
+```
+
+The Sentinel-2 L2A satellite should theoretically give us images where every pixel corresponds to 20m^2, so this is very acceptable for our purposes, since we are mostly interested in *relative* distances in the coming heatmap, and our method for calculating the 'green area' area of the region of interest is not precise enough to begin with to worry too much about a 10cm discrepancy on the x-axis of every pixel.
+
+## Size threshold for 'green areas'
+
+From the leaflet above, we can also determine that more than about 10 square pixels (~200^2) looks to be a good cutoff size for a green area that one would visit on a stroll - it is right about the size when a small patch of trees become a (in our opinion) 'green area'. Let's remove the small areas.
+
+
+```{r, warning=FALSE}
 # Number of pixels^2 above which we allow an area to be kept in our map
 area_min_pix <- 10 # (~200m^2)
 
