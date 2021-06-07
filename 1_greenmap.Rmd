@@ -46,7 +46,10 @@ aarhus_zoom <- 11
 # EPSG 3857
 aarhus_NIR <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 1)
 aarhus_red <- raster('data/32VNH_0_B08,B04,B03.tiff', band = 2)
-aarhus_NDVI <- (aarhus_NIR - aarhus_red) / (aarhus_NIR + aarhus_red)
+
+NDVI_numerator <- aarhus_NIR - aarhus_red
+NDVI_denominator <- aarhus_NIR + aarhus_red
+aarhus_NDVI <- NDVI_numerator / NDVI_denominator
 
 # Reproject raster since EPSG 3857 distances are very warped this far north
 aarhus_NDVI <- projectRaster(aarhus_NDVI, crs = 25832) # 25832 has very accurate distances in Denmark - we measured
@@ -101,7 +104,7 @@ An NDVI threshold of 0.5 catches most of the parks and forests, which is pretty 
 
 An **NDVI threshold of 0.6** seems to match pretty well with our definition of a 'green area' - we lose a bit of our wanted areas, but we also eliminate most of the gap-jumping (areas that span across roads etc.) and areas that do not have at least some taller vegetation than grass - a fair trade off.
 
-## Filter off small areas
+## Size threshold for 'green areas'
 
 From the leaflet above, we can also determine that more than about 10 square pixels (~200^2) looks to be a good cutoff size for a green area that one would visit on a stroll - it is right about the size when a small patch of trees become a (in our opinion) 'green area'. Let's remove the smaller areas.
 
