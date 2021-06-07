@@ -51,9 +51,6 @@ NDVI_numerator <- aarhus_NIR - aarhus_red
 NDVI_denominator <- aarhus_NIR + aarhus_red
 aarhus_NDVI <- NDVI_numerator / NDVI_denominator
 
-# Reproject raster since EPSG 3857 distances are very warped this far north
-#aarhus_NDVI <- projectRaster(aarhus_NDVI, crs = 25832) # 25832 has very accurate distances in Denmark - we measured
-
 # Let's check it out
 plot(aarhus_NDVI)
 ```
@@ -276,13 +273,13 @@ To make it a bit easier to see where you are when in heatmap mode, let's load in
 roads_4326 <- st_read('data/osm-roads/gis_osm_roads_free_1.shp')
 
 # Transform roads crs to match raster
-roads_25832 <- st_transform(roads_4326 , crs = crs(aarhus_NDVI)) 
+roads_25832 <- st_transform(roads_4326 , crs = crs(aarhus_veg)) 
 
 # Verify that roads can be cropped to the raster's bounds correctly
-compareCRS(roads_25832, crs(aarhus_NDVI))
+compareCRS(roads_25832, crs(aarhus_veg))
 
 # Bounding box of satellite image
-aarhus_box <- st_make_grid(aarhus_NDVI, n = 1)
+aarhus_box <- st_make_grid(aarhus_veg, n = 1)
 
 # Cropping the roads, so we don't have superfluous data to load and display
 roads_cropped <- st_intersection(aarhus_box, roads_25832)
@@ -378,13 +375,13 @@ quad_test
 plot(quad_test) # easier to read in fullscreen
 ```
 
-The quadrat test will give us a basic understanding of whether the location of 'green areas' differ from a totally random placement across our focus area. Looking at the returned χ^2 value, we can indeed see that there is indeed a difference from a totally random spatial distribution of 'green areas', and with a p-value of ~0.00000000000000022, we can definitely say that this is an unlikely result to get from a random distribution, which seems to confirm our hypothesis, that 'green areas' are unevenly distributed in our region of interest.
+The quadrat test will give us a basic understanding of whether the location of 'green areas' differ from a totally random placement across our focus area. Looking at the returned χ^2 value, we can see that there is indeed a difference from a totally random spatial distribution of 'green areas', and with a p-value of ~0.00000000000000022, we can definitely say that this is an unlikely result to get from a random distribution, which seems to confirm our hypothesis, that 'green areas' are unevenly distributed in our region of interest.
 
-However, when we look at the plot of the quadrat test, we can tell that a lot of this difference stems from the sea area to the east, in which we have (nearly) no 'green areas'. For example, when looking at most of the central easternmost cells (those corresponding with the sea area), we can see that we expect to see ~12 green areas, but only find 0 or 1, which pretty heavily skews our results, since we are only interested in the spatial distribution of 'green areas' on land.
+However, when we look at the plot of the quadrat test, we can tell that a lot of this difference stems from the sea area to the east, in which we have (nearly) no 'green areas'. For example, when looking at most of the central easternmost cells (those corresponding with the sea area), we can see that we expect to see ~14.5 green areas, but only find 0 or 1, which pretty heavily skews our results, since we are only interested in the spatial distribution of 'green areas' on land.
 
-### How much of Aarhus (our area) is covered by 'green areas'
+### How much of Aarhus (our area) is covered by 'green area'
 
-To find this value, we simply have to divide the total area of 'green areas' by the total land area of our region of interest. These areas can be calculated with the amount of green pixels (0 meter distance values) in our heatmap and every other distance value pixel that is not `NA` (to approximate only land area, since `NA` somewhat represents sea area).
+To find this value, we simply have to divide the total area of 'green areas' by the total land area of our region of interest. These areas can be calculated with the amount of 'green' pixels (0 meter distance values) in our heatmap and every other distance value pixel that is not `NA` (to approximate only land area, since `NA` somewhat represents sea area).
 
 ```{r, warning=FALSE}
 # Init counters for total area that is not NA and areas of 'green' pixels
@@ -406,7 +403,7 @@ for (pix_val in aarhus_dist_heatmap@data@values) {
 green_area / total_area
 ```
 
-About 19% of the total area of our (imprecisely) defined Aarhus area is covered in what we have chosen to define as 'green areas'.
+About 23% of the total area of our (imprecisely) defined Aarhus area is covered in what we have chosen to define as 'green areas'.
 
 To find out what these areas are in non-pixel units, we simply multiply the pixel count by our pixel size (in meters) to get the m² area, and for easier readability, we can convert m² to hectares by multiplying again with 10⁴.
 
@@ -419,4 +416,4 @@ green_area_hectares
 total_area_hectares
 ```
 
-That is ~8,100 hectares of 'green areas' out of a total of ~51,150 hectares of land in our region of interest!
+That is ~10,100 hectares of 'green area' out of a total of ~44,000 hectares of land in our region of interest!
