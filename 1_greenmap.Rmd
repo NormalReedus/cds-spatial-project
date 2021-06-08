@@ -118,7 +118,7 @@ res(aarhus_veg)
 The Sentinel-2 L2A satellite should theoretically give us images where every pixel corresponds to 20m^2, so this is very acceptable for our purposes, since we are mostly interested in *relative* distances in the coming heatmap, and our method for calculating the 'green area' area of the region of interest is not precise enough to begin with to worry too much about a 10cm discrepancy on the x-axis of every pixel.
 
 ## Size threshold for 'green areas'
-
+w
 From the leaflet above, we can also determine that more than about 10 square pixels (~200^2) looks to be a good cutoff size for a green area that one would visit on a stroll - it is right about the size when a small patch of trees become a (in our opinion) 'green area'. Let's remove the small areas.
 
 
@@ -192,7 +192,7 @@ leaflet() %>%
 
 Small patches of trees (etc.) are now gone, so we can sleep soundly knowing that our application will not deceive people into thinking they are living near a park when in reality they just have a tree in their back yard.
 
-## Generating distance heatmap
+## Generate distance heatmap
 
 We are now ready to generate a new raster heatmap, where every single location (in our defined area) is denoted with the distance to the nearest 'green area' by its color.
 
@@ -219,7 +219,7 @@ plot(aarhus_dist_heatmap, col = veg_colors(20))
 
 Our new heatmap has a few very high distance values, mostly because the large sections of water obviously are not very close to vegetation (except for some annoying edge cases). Looking at the heatmap with a small number of color steps allows us to get a rough idea of which distances are the maximum observed on land, which is the interesting part for us. Using a color picker, we can tell that values on land mostly go to ~1km.
 
-## Compress data range
+## Compress distance range
 
 To combat the problem of our color range and legend being stretched (which makes it hard to distinguish smaller distance values), we can simply remove all distance values that we observe to only be present at sea. This makes our heatmap more readable. We have fine tuned this maximum allowed distance to 1200 meters by trial and error.
 
@@ -285,7 +285,7 @@ aarhus_box <- st_make_grid(aarhus_veg, n = 1)
 roads_cropped <- st_intersection(aarhus_box, roads_25832)
 ```
 
-## Display the final app
+## Display the final application
 
 Finally, we can display a leaflet to help you determine the distance to the nearest 'green area' to go for a nice walk in, wherever you are (inside of our defined Aarhus area).
 
@@ -343,7 +343,7 @@ You can now find the best place to buy a house if you want to live close to a pa
 ## A few interesting questions
 ### Are 'green areas' clustered?
 
-Knowing how plants and trees repoduce and the effects of urbanisation on vegetation, we would expect to see 'green areas' being more closely located some places than other. Is this the case for our defined Aarhus area?
+Knowing how plants and trees reproduce and the effects of urbanisation on vegetation, we would expect to see 'green areas' being more closely located some places than other. Is this the case for our defined Aarhus area?
 
 ```{r, warning=FALSE, fig.width=12, fig.asp=1}
 # Clump together pixels to make a polygon for every area
