@@ -1,17 +1,38 @@
-# cds-spatial-project
+# Greenmap
+A Spatial Analytics semester project by:
 
-## Guide
-SKRIV OM HVORDAN MAN KØRER SCRIPTS OG INSTALLERER DEPS
+Mikkel Plesner Ottosen & Magnus Bendix Borregaard
 
-## Noter til det skriftlige
-- Forklar om EPSG'er
-  - EPSG 3857 havde dårlige afstande i DK, så vi blev nødt til at projektere til 25832, som passer meget godt med DK
-- OSM roads-scriptet downloader altid nyeste version - man skal selvfølgelig være klar over, at formatet og filnavne kan ændre sig, hvis man kører dette om lang tid.
-  - Nuværende roads shapes er en samling af 5 filer, der skal bruges sammen, for at de virker.
-- Find referencer på, hvorfor havnen kan være så grøn (alger, tang etc?)
-- Skriv om processen, hvori vi valgte et threshold til grønne områder
-  - Vi brugte den her: https://www.int-arch-photogramm-remote-sens-spatial-inf-sci.net/XLII-4-W16/237/2019/isprs-archives-XLII-4-W16-237-2019.pdf
-- Forklar at resolution ikke rigtigt passede (se EPSG-problemer)
-  - så vi lavede vores egen måling med Google Maps (nord/syd af vores raster, og dividerede med antal pixels) for at overskrive resolution
-## Dependencies
-- igraph (bruges af `clump`)
+## Results
+The script, results, and interactive leaflets best viewed by opening `1_greenmap.html` in your browser!
+
+## Reproducing results
+### Packages
+If you wish to run the script yourself, you will need to install the following packages:
+- igraph 1.2.6
+- tidyverse 1.3.1
+- raster 3.4-10
+- sf 0.9-8
+- leaflet 2.0.4.1
+- hash 2.2.6.1
+- rgeos 0.5-5
+- spatstat 2.1-0
+
+If you have any issues installing these, you might need to install [Rtools for Windows](https://cran.r-project.org/bin/windows/Rtools/), and try again.
+
+### Data
+The satellite image used as the primary data for this project is already included in this repo in `./data/`. You will, however, need to download and unpack the OpenStreetMap roads shapefiles from [here](https://download.geofabrik.de/europe/denmark-latest-free.shp.zip), or simply by running the setup bash script:
+```
+./0_setup.sh
+```
+
+If you have permission issues running the setup script, run the following, and try again:
+
+```
+chmod +x 0_setup.sh
+```
+
+### Running the project script
+When the former steps are complete, you are ready to run the main script. 
+
+Simply open `spatial-semester-project.Rproj` with RStudio, select the file `1_greenmap.Rmd` and run all cells (making sure your global environment is empty first). This process took 10-15 minutes on our device, so you can grab a cup of coffee while you wait.
